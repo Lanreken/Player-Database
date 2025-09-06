@@ -59,16 +59,63 @@ exports.getAllPlayers = async (req, res) => {
   }
 };
 
-exports.getPlayerByPosition = async (req, res) => {
+exports.getPlayersByPosition = async (req, res) => {
   try {
-    const { playerPosition } = req.params;
-    const players = await playerModel.find({ playerPosition: playerPosition.toUpperCase() });
+    const playerPosition = req.params.position.toUpperCase();
+
+    const players = await playerModel.find({ playerPosition });
+
+    if (!players || players.length === 0) {
+      return res.status(404).json({
+        message: `No players found for position ${playerPosition}`,
+      });
+    }
+
     res.status(200).json({
-      players,
+      message: `Players playing as ${playerPosition}`,
+      data: players,
     });
   } catch (error) {
     res.status(500).json({
-      message: error.message,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+exports.getPlayersByWing = async (req, res) => {
+  try {
+    const wingGroups = {
+      left: ["LB", "LWB", "LW", "LM", "LWF"],
+      right: ["RB", "RWB", "RW", "RM", "RWF"],
+      center: ["CB", "CDM", "CM", "CAM", "CF", "ST", "DM", "AM"],
+      gk: ["GK"],
+    };
+
+    const wing = req.params.wing.toLowerCase();
+
+    if (!wingGroups[wing]) {
+      return res.status(400).json({
+        message: "Invalid wing. Use left, right, center, or gk.",
+      });
+    }
+
+    const players = await playerModel.find({ playerPosition: { $in: wingGroups[wing] } });
+
+    if (!players || players.length === 0) {
+      return res.status(404).json({
+        message: `No players found for ${wing} wing`,
+      });
+    }
+
+    res.status(200).json({
+      message: `Players on the ${wing} wing`,
+      data: players,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
